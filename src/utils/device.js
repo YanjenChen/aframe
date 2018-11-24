@@ -1,12 +1,12 @@
 var vrDisplay;
-var arDisplay = undefined;
-var arCameraOutputCanvas = undefined;
+var arDisplay;
+var arCameraOutputCanvas;
 
 // Support both WebVR and WebXR APIs.
 if (navigator.xr) {
   // Enter AR mode by detecting meta tag with name == "aframe-enable-ar-scene".
-  meta = document.querySelector('meta[name="aframe-enable-ar-scene"]');
-  if( meta ) {
+  let meta = document.querySelector('meta[name="aframe-enable-ar-scene"]');
+  if (meta) {
     // Check browser has enabled #webxr-hit-test. If no, fall back to normal scene.
     if (XRSession.prototype.requestHitTest) {
       console.log('#webxr, #webxr-hit-test detected.');

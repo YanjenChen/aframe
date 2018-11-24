@@ -1,7 +1,30 @@
 var vrDisplay;
+var arDisplay = undefined;
+var arCameraOutputCanvas = undefined;
 
 // Support both WebVR and WebXR APIs.
 if (navigator.xr) {
+  // Enter AR mode by detecting meta tag with name == "aframe-enable-ar-scene".
+  metas = document.getElementsByTagName('meta');
+  metas.forEach(meta => {
+    if(meta.getAttribute('name') == 'aframe-enable-ar-scene') {
+      // Check browser has enabled #webxr-hit-test. If no, fall back to normal scene.
+      if (XRSession.prototype.requestHitTest) {
+        console.log('#webxr, #webxr-hit-test detected.');
+        arCameraOutputCanvas = document.createElement('canvas');
+        navigator.xr.requestDevice().then(function (device) {
+          var arCameraCtx = arCameraOutputCanvas.getContext('xrpresent');
+          device.supportsSession({outputContext: arCameraCtx, environmentIntegration: true}).then(function () {
+            arDisplay = device;
+          });
+        });
+      } else {
+        console.warn("Please enable chrome://flags #webxr, #webxr-hit-test");
+      }
+    }
+  });
+
+  // Get WebXR VR device
   navigator.xr.requestDevice().then(function (device) {
     device.supportsSession({immersive: true, exclusive: true}).then(function () {
       vrDisplay = device;
@@ -16,8 +39,13 @@ if (navigator.xr) {
 }
 
 module.exports.isWebXRAvailable = navigator.xr !== undefined;
+module.exports.isARAvailable = arDisplay !== undefined;
 
+function getArCameraOutputCanvas () { return arCameraOutputCanvas; }
+function getARDisplay () { return arDisplay; }
 function getVRDisplay () { return vrDisplay; }
+module.exports.getArCameraOutputCanvas = getArCameraOutputCanvas;
+module.exports.getARDisplay = getARDisplay;
 module.exports.getVRDisplay = getVRDisplay;
 
 /**
@@ -135,4 +163,3 @@ module.exports.PolyfillControls = function PolyfillControls (object) {
     }
   };
 };
-

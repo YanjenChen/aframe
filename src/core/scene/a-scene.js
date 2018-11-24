@@ -16,6 +16,7 @@ var bind = utils.bind;
 var isIOS = utils.device.isIOS();
 var isMobile = utils.device.isMobile();
 var isWebXRAvailable = utils.device.isWebXRAvailable;
+var isARAvailable = utils.device.isARAvailable;
 var registerElement = re.registerElement;
 var warn = utils.debug('core:a-scene:warn');
 
@@ -40,6 +41,7 @@ module.exports.AScene = registerElement('a-scene', {
       value: function () {
         this.isIOS = isIOS;
         this.isMobile = isMobile;
+        this.isARAvailable = isARAvailable;
         this.isScene = true;
         this.object3D = new THREE.Scene();
         var self = this;
@@ -62,7 +64,7 @@ module.exports.AScene = registerElement('a-scene', {
         this.setAttribute('inspector', '');
         this.setAttribute('keyboard-shortcuts', '');
         this.setAttribute('screenshot', '');
-        this.setAttribute('vr-mode-ui', '');
+        this.setAttribute('vr-mode-ui', { enabled: !isARAvailable });
       }
     },
 
@@ -120,6 +122,9 @@ module.exports.AScene = registerElement('a-scene', {
             resize();
           }
         });
+        // If AR mode enabled, directly enter AR.
+        if(isARAvailable) { self.enterAR(); }
+
         this.play();
 
         // Add to scene index.
@@ -244,6 +249,44 @@ module.exports.AScene = registerElement('a-scene', {
     },
 
     /**
+     * Handle WebXR setting and enter AR mode.
+     */
+    enterAR: {
+      value: function () {
+        var self = this;
+        var arDisplay;
+        var arCameraCtx;
+        var arManager = self.renderer.xr;
+
+        if (this.isMobile) {
+          arDisplay = utils.device.getARDisplay();
+          arManager.setDevice(arDisplay);
+          arManager.enabled = true;
+          if (isARAvailable) {
+            arCameraCtx = utils.device.getArCameraOutputCanvas().getContext('xrpresent');
+            arDisplay.requestSession({outputContext: arCameraCtx, environmentIntegration: true}).then(enterARSuccess);
+          }
+          return Promise.resolve();
+        }
+        return Promise.resolve();
+
+        function enterARSuccess (xrSession) {
+          self.xrSession = xrSession;
+          arManager.setFrameOfReferenceType('eye-level');
+          arManager.setSession(xrSession);
+          xrSession.requestFrameOfReference('eye-level').then(function (frameOfReference) {
+            self.frameOfReference = frameOfReference;
+          });
+          self.addState('ar-mode');
+          self.emit('enter-ar', {target: self});
+          self.addFullScreenStyles();
+          self.resize();
+        }
+      },
+      writable: true
+    },
+
+    /**
      * Call `requestPresent` if WebVR or WebVR polyfill.
      * Call `requestFullscreen` on desktop.
      * Handle events, states, fullscreen styles.
@@ -254,7 +297,7 @@ module.exports.AScene = registerElement('a-scene', {
       value: function () {
         var self = this;
         var vrDisplay;
-        var vrManager = self.renderer.vr;
+        var vrManager = self.renderer.xr;
         // Don't enter VR if already in VR.
         if (this.is('vr-mode')) { return Promise.resolve('Already in VR.'); }
         // Enter VR via WebVR API.
@@ -339,7 +382,7 @@ module.exports.AScene = registerElement('a-scene', {
       value: function () {
         var self = this;
         var vrDisplay;
-        var vrManager = this.renderer.vr;
+        var vrManager = this.renderer.xr;
 
         // Don't exit VR if not in VR.
         if (!this.is('vr-mode')) { return Promise.resolve('Not in VR.'); }
@@ -510,19 +553,19 @@ module.exports.AScene = registerElement('a-scene', {
         var camera = this.camera;
         var canvas = this.canvas;
         var embedded;
-        var isVRPresenting;
+        var isXRPresenting;
         var size;
-        var vrDevice;
+        var xrDevice;
 
-        vrDevice = this.renderer.vr.getDevice();
-        isVRPresenting = this.renderer.vr.enabled && vrDevice && vrDevice.isPresenting;
+        xrDevice = this.renderer.xr.getDevice();
+        isXRPresenting = this.renderer.xr.enabled && xrDevice && xrDevice.isPresenting;
 
         // Do not update renderer, if a camera or a canvas have not been injected.
         // In VR mode, three handles canvas resize based on the dimensions returned by
         // the getEyeParameters function of the WebVR API. These dimensions are independent of
         // the window size, therefore should not be overwritten with the window's width and
         // height, // except when in fullscreen mode.
-        if (!camera || !canvas || (this.is('vr-mode') && (this.isMobile || isVRPresenting))) {
+        if (!camera || !canvas || (this.is('vr-mode') && (this.isMobile || isXRPresenting))) {
           return;
         }
 
@@ -547,7 +590,7 @@ module.exports.AScene = registerElement('a-scene', {
         var rendererAttrString;
         var rendererConfig;
 
-        rendererConfig = {alpha: true, antialias: !isMobile, canvas: this.canvas, logarithmicDepthBuffer: false};
+        rendererConfig = {alpha: true, antialias: (!isMobile || isARAvailable), canvas: this.canvas, logarithmicDepthBuffer: false, preserveDrawingBuffer: isARAvailable};
         if (this.hasAttribute('antialias')) {
           rendererConfig.antialias = this.getAttribute('antialias') === 'true';
         }
@@ -577,11 +620,15 @@ module.exports.AScene = registerElement('a-scene', {
         }
 
         renderer = this.renderer = new THREE.WebGLRenderer(rendererConfig);
+        if(isARAvailable) {
+          renderer.autoClear = false;
+          renderer.xr.setMode('ar');
+        }
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.sortObjects = false;
-        if (this.camera) { renderer.vr.setPoseTarget(this.camera.el.object3D); }
+        if (this.camera) { renderer.xr.setPoseTarget(this.camera.el.object3D); }
         this.addEventListener('camera-set-active', function () {
-          renderer.vr.setPoseTarget(self.camera.el.object3D);
+          renderer.xr.setPoseTarget(self.camera.el.object3D);
         });
         loadingScreen.setup(this, getCanvasSize);
       },
@@ -790,7 +837,17 @@ function exitFullscreen () {
 }
 
 function setupCanvas (sceneEl) {
+  var arCanvasEl;
   var canvasEl;
+
+  // If enter AR mode, append camera canvas first
+  if(isARAvailable) {
+    arCanvasEl = utils.device.getArCameraOutputCanvas();
+    arCanvasEl.classList.add('a-canvas');
+    // Mark canvas as provided/injected by A-Frame.
+    arCanvasEl.dataset.aframeCanvas = true;
+    sceneEl.appendChild(arCanvasEl);
+  }
 
   canvasEl = document.createElement('canvas');
   canvasEl.classList.add('a-canvas');
@@ -798,11 +855,14 @@ function setupCanvas (sceneEl) {
   canvasEl.dataset.aframeCanvas = true;
   sceneEl.appendChild(canvasEl);
 
-  document.addEventListener('fullscreenchange', onFullScreenChange);
-  document.addEventListener('mozfullscreenchange', onFullScreenChange);
-  document.addEventListener('webkitfullscreenchange', onFullScreenChange);
-
+  if (!isARAvailable) {
+    document.addEventListener('fullscreenchange', onFullScreenChange);
+    document.addEventListener('mozfullscreenchange', onFullScreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullScreenChange);
+  }
   // Prevent overscroll on mobile.
+  if (isARAvailable)
+    arCanvasEl.addEventListener('touchmove', function (event) { event.preventDefault(); });
   canvasEl.addEventListener('touchmove', function (event) { event.preventDefault(); });
 
   // Set canvas on scene.

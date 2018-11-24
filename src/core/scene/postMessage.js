@@ -14,7 +14,7 @@ module.exports = function initPostMessageAPI (scene) {
 
 function postMessageAPIHandler (event) {
   var scene = this;
-  if (!event.data) { return; }
+  if (!event.data || scene.isARAvailable) { return; }
 
   switch (event.data.type) {
     case 'vr': {

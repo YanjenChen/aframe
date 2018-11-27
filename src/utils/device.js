@@ -5,9 +5,9 @@ var arCameraOutputCanvas;
 // Support both WebVR and WebXR APIs.
 if (navigator.xr) {
   // Enter AR mode by detecting meta tag with name == "aframe-enable-ar-scene".
-  let meta = document.querySelector('meta[name="aframe-enable-ar-scene"]');
-  if (meta) {
+  if (document.querySelector('meta[name="aframe-enable-ar-scene"]')) {
     // Check browser has enabled #webxr-hit-test. If no, fall back to normal scene.
+    console.log('Request enter aframe AR.');
     if (XRSession.prototype.requestHitTest) {
       console.log('#webxr, #webxr-hit-test detected.');
       arCameraOutputCanvas = document.createElement('canvas');
@@ -15,6 +15,8 @@ if (navigator.xr) {
         var arCameraCtx = arCameraOutputCanvas.getContext('xrpresent');
         device.supportsSession({outputContext: arCameraCtx, environmentIntegration: true}).then(function () {
           arDisplay = device;
+        }).catch(function() {
+          console.warn('AR does not support requested session.');
         });
       });
     } else {
@@ -37,7 +39,7 @@ if (navigator.xr) {
 }
 
 module.exports.isWebXRAvailable = navigator.xr !== undefined;
-module.exports.isARAvailable = arDisplay !== undefined;
+module.exports.isARAvailable = (navigator.xr !== undefined && XRSession.prototype.requestHitTest !== undefined);
 
 function getArCameraOutputCanvas () { return arCameraOutputCanvas; }
 function getARDisplay () { return arDisplay; }

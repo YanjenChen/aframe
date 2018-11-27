@@ -65,6 +65,7 @@ module.exports.AScene = registerElement('a-scene', {
         this.setAttribute('keyboard-shortcuts', '');
         this.setAttribute('screenshot', '');
         this.setAttribute('vr-mode-ui', { enabled: !isARAvailable });
+        //this.setAttribute('vr-mode-ui', '');
       }
     },
 
@@ -122,10 +123,13 @@ module.exports.AScene = registerElement('a-scene', {
             resize();
           }
         });
-        // If AR mode enabled, directly enter AR.
-        if(isARAvailable) { self.enterAR(); }
-
         this.play();
+
+        // If AR mode enabled, directly enter AR.
+        //if(isARAvailable) { self.enterAR(); }
+        this.enterARBound = function () { self.enterAR(); };
+        //window.addEventListener('ardisplayactivate', this.enterARBound);
+        document.querySelector('#enter-ar').addEventListener('click', this.enterARBound);
 
         // Add to scene index.
         scenes.push(this);
@@ -253,6 +257,8 @@ module.exports.AScene = registerElement('a-scene', {
      */
     enterAR: {
       value: function () {
+        console.log('Enter AR.');
+
         var self = this;
         var arDisplay;
         var arCameraCtx;
@@ -262,15 +268,20 @@ module.exports.AScene = registerElement('a-scene', {
           arDisplay = utils.device.getARDisplay();
           arManager.setDevice(arDisplay);
           arManager.enabled = true;
-          if (isARAvailable) {
+          if (this.isARAvailable) {
+            console.log('Requesting AR session.');
             arCameraCtx = utils.device.getArCameraOutputCanvas().getContext('xrpresent');
-            arDisplay.requestSession({outputContext: arCameraCtx, environmentIntegration: true}).then(enterARSuccess);
+            arDisplay.requestSession({outputContext: arCameraCtx, environmentIntegration: true}).then(enterARSuccess).catch(function(err) {
+              console.warn('Enter AR failed at request session. Err: ', err);
+            });
           }
           return Promise.resolve();
         }
         return Promise.resolve();
 
         function enterARSuccess (xrSession) {
+          console.log('Enter AR success.');
+
           self.xrSession = xrSession;
           arManager.setFrameOfReferenceType('eye-level');
           arManager.setSession(xrSession);
@@ -841,8 +852,10 @@ function setupCanvas (sceneEl) {
   var canvasEl;
 
   // If enter AR mode, append camera canvas first
+  console.log('isARAvailable', isARAvailable);
   if(isARAvailable) {
     arCanvasEl = utils.device.getArCameraOutputCanvas();
+    console.log('Insert AR canvas.', arCanvasEl);
     arCanvasEl.classList.add('a-canvas');
     // Mark canvas as provided/injected by A-Frame.
     arCanvasEl.dataset.aframeCanvas = true;

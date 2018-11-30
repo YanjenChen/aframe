@@ -42,3 +42,4 @@ require('./scene/renderer');
 require('./scene/screenshot');
 require('./scene/stats');
 require('./scene/vr-mode-ui');
+require('./scene/ar-mode-ui');

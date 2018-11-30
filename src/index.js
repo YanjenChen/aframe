@@ -50,6 +50,9 @@ require('present'); // Polyfill `performance.now()`.
 if (utils.device.isBrowserEnvironment) {
   require('./style/aframe.css');
   require('./style/rStats.css');
+  if (utils.device.isAREnabled) {
+    require('./style/material.min.css');
+  }
 }
 
 // Required before `AEntity` so that all components are registered.
@@ -82,7 +85,7 @@ require('./core/a-mixin');
 require('./extras/components/');
 require('./extras/primitives/');
 
-console.log('A-Frame Version: 0.8.2 (Date 2018-11-26, Commit #beed168a)');
+console.log('A-Frame Version: 0.8.2 (Date 2018-11-30, Commit #86c35619)');
 console.log('three Version:', pkg.dependencies['three']);
 console.log('WebVR Polyfill Version:', pkg.dependencies['webvr-polyfill']);
 

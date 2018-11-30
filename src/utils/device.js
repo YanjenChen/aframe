@@ -1,6 +1,7 @@
 var vrDisplay;
 var arDisplay;
 var arCameraOutputCanvas;
+var arCameraCtx
 
 // Support both WebVR and WebXR APIs.
 if (navigator.xr) {
@@ -12,7 +13,7 @@ if (navigator.xr) {
       console.log('#webxr, #webxr-hit-test detected.');
       arCameraOutputCanvas = document.createElement('canvas');
       navigator.xr.requestDevice().then(function (device) {
-        var arCameraCtx = arCameraOutputCanvas.getContext('xrpresent');
+        arCameraCtx = arCameraOutputCanvas.getContext('xrpresent');
         device.supportsSession({outputContext: arCameraCtx, environmentIntegration: true}).then(function () {
           arDisplay = device;
         }).catch(function() {
@@ -40,11 +41,14 @@ if (navigator.xr) {
 
 module.exports.isWebXRAvailable = navigator.xr !== undefined;
 module.exports.isARAvailable = (navigator.xr !== undefined && XRSession.prototype.requestHitTest !== undefined);
+module.exports.isAREnabled = document.querySelector('meta[name="aframe-enable-ar-scene"]') !== null;
 
 function getArCameraOutputCanvas () { return arCameraOutputCanvas; }
+function getARCameraCtx () { return arCameraCtx; }
 function getARDisplay () { return arDisplay; }
 function getVRDisplay () { return vrDisplay; }
 module.exports.getArCameraOutputCanvas = getArCameraOutputCanvas;
+module.exports.getARCameraCtx = getARCameraCtx;
 module.exports.getARDisplay = getARDisplay;
 module.exports.getVRDisplay = getVRDisplay;
 

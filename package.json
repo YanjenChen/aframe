@@ -48,7 +48,7 @@
     "present": "0.0.6",
     "promise-polyfill": "^3.1.0",
     "style-attr": "^1.0.2",
-    "three": "YanjenChen/three.js#webxr-ar",
+    "three": "github:YanjenChen/three.js#webxr-ar",
     "three-bmfont-text": "^2.1.0",
     "webvr-polyfill": "^0.10.8"
   },

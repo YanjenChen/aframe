@@ -65,7 +65,7 @@ module.exports.AScene = registerElement('a-scene', {
         this.setAttribute('keyboard-shortcuts', '');
         this.setAttribute('screenshot', '');
 
-        if(isAREnabled) {
+        if (isAREnabled) {
           this.setAttribute('ar-mode-ui', '');
         } else {
           this.setAttribute('vr-mode-ui', '');
@@ -129,16 +129,12 @@ module.exports.AScene = registerElement('a-scene', {
         });
         this.play();
 
-        // If AR mode enabled, directly enter AR.
-        //if(isAREnabled) { self.enterAR(); }
-        //this.enterARBound = function () { self.enterAR(); };
-        //window.addEventListener('ardisplayactivate', this.enterARBound);
-        //document.querySelector('#enter-ar').addEventListener('click', this.enterARBound);
+        // Enter AR will be trigger by ar-mode-ui component.
 
         // Add to scene index.
         scenes.push(this);
 
-        if(!isAREnabled) {
+        if (!isAREnabled) {
           // Handler to exit VR (e.g., Oculus Browser back button).
           this.onVRPresentChangeBound = bind(this.onVRPresentChange, this);
           window.addEventListener('vrdisplaypresentchange', this.onVRPresentChangeBound);
@@ -638,7 +634,7 @@ module.exports.AScene = registerElement('a-scene', {
         }
 
         renderer = this.renderer = new THREE.WebGLRenderer(rendererConfig);
-        if(isAREnabled) {
+        if (isAREnabled) {
           renderer.autoClear = false;
           renderer.xr.setMode('ar');
         } else {
@@ -681,7 +677,7 @@ module.exports.AScene = registerElement('a-scene', {
             sceneEl.clock = new THREE.Clock();
             loadingScreen.remove();
             sceneEl.renderer.setAnimationLoop(this.render);
-            if(!isAREnabled) {
+            if (!isAREnabled) {
               sceneEl.render();
             }
             sceneEl.renderStarted = true;
@@ -868,7 +864,7 @@ function setupCanvas (sceneEl) {
   var canvasEl;
 
   // If enter AR mode, append camera canvas first
-  if(isAREnabled) {
+  if (isAREnabled) {
     canvasEl = utils.device.getArCameraOutputCanvas();
   } else {
     canvasEl = document.createElement('canvas');
